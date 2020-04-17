@@ -1,0 +1,8 @@
+project_id                                                =   "data-protection-01"
+gke_cluster_name                               =   "dmilan-gke-01"
+region                                                      =    "us-east1"
+network                                                  =   "network-data-protection-01"
+subnetwork                                            =   "network-data-protection-01"
+ip_range_pods                                       =   "pods"
+ip_range_services                                  =   "services"
+compute_engine_service_account       =  "gke-admin-01"
