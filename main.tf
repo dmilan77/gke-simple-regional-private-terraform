@@ -108,6 +108,24 @@ data "google_compute_subnetwork" "subnetwork" {
   # ip_cidr_range="192.168.0.0/24"
 }
 
+resource "google_compute_firewall" "port-22-80-8080" {
+  name    = "${var.network}-port-22-80-8080"
+  project= var.project_id
+  network = google_compute_network.network.self_link
+
+  allow {
+    protocol = "icmp"
+  }
+
+  allow {
+    protocol = "tcp"
+    ports    = ["22", "80", "8080"]
+  }
+  source_ranges =["0.0.0.0/0"]
+}
+
+
+
 module "gke" {
   # https://github.com/terraform-google-modules/terraform-google-kubernetes-engine.git
   # source                    = "../terraform-google-kubernetes-engine/modules/private-cluster/"
@@ -187,10 +205,10 @@ module "workload_identity" {
   use_existing_k8s_sa = false
 }
 resource "google_compute_instance" "k8bastion" {
-  name         = "k8bastion"
+  name         = var.bastion_host_name
   project         = var.project_id
   machine_type = "n1-standard-1"
-  zone         = "us-east1-b"
+  zone         = var.zones[0]
 
   tags = ["foo", "bar"]
 

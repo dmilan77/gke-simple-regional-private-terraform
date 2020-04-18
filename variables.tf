@@ -67,3 +67,6 @@ variable "key_name_gke" {
 variable "key_name_disk" {
   description = "key disk name"
 }
+variable "bastion_host_name" {
+  description = "bastion host name for accessing K8s"
+}
