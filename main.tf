@@ -15,11 +15,11 @@
  */
 
 
-
+# gcloud auth application-default login
 provider "google" {
   version = "~> 3.14.0"
   region  = var.region
-  credentials = file("~/.google/account.json")
+  # credentials = file("/xxxxx/xxxx/xxxx/account.json")
 }
 
 resource "google_service_account" "compute_engine_service_account" {
@@ -40,7 +40,7 @@ variable "saroles" {
   }
 }
 
-resource "google_project_iam_binding" "computeviewer" {
+resource "google_project_iam_binding" "saroles" {
   for_each = var.saroles
   project = var.project_id
   role    =each.key
@@ -50,6 +50,28 @@ resource "google_project_iam_binding" "computeviewer" {
   ]
 }
 
+resource "google_kms_crypto_key_iam_binding" "gke_crypto_key" {
+  crypto_key_id = "projects/${var.project_id}/locations/${var.region}/keyRings/${var.key_ring_name}/cryptoKeys/${var.key_name_gke}"
+  role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
+
+  members = [
+    "serviceAccount:${google_service_account.compute_engine_service_account.email}",
+    "serviceAccount:service-${var.project_number}@compute-system.iam.gserviceaccount.com",
+    "serviceAccount:service-${var.project_number}@container-engine-robot.iam.gserviceaccount.com",
+
+  ]
+}
+resource "google_kms_crypto_key_iam_binding" "disk_crypto_key" {
+  crypto_key_id = "projects/${var.project_id}/locations/${var.region}/keyRings/${var.key_ring_name}/cryptoKeys/${var.key_name_disk}"
+  role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
+
+  members = [
+    "serviceAccount:${google_service_account.compute_engine_service_account.email}",
+    "serviceAccount:service-${var.project_number}@compute-system.iam.gserviceaccount.com",
+    "serviceAccount:service-${var.project_number}@container-engine-robot.iam.gserviceaccount.com",
+
+  ]
+}
 
 
 data "google_compute_subnetwork" "subnetwork" {
@@ -61,7 +83,7 @@ data "google_compute_subnetwork" "subnetwork" {
 module "gke" {
   # https://github.com/terraform-google-modules/terraform-google-kubernetes-engine.git
   # source                    = "../terraform-google-kubernetes-engine/modules/private-cluster/"
-  source                    = "git::https://github.com/terraform-google-modules/terraform-google-kubernetes-engine.git//modules/private-cluster?ref=v8.1.0"
+  source                    = "git::https://github.com/terraform-google-modules/terraform-google-kubernetes-engine.git//modules/beta-private-cluster?ref=release-v8.2.0"
   project_id                = var.project_id
   name                      = "${var.gke_cluster_name}"
   regional                  = true
@@ -93,8 +115,29 @@ module "gke" {
       service_account   = "${google_service_account.compute_engine_service_account.email}"
       preemptible       = false
       max_pods_per_node = 12
+      boot-disk-kms-key = "${google_kms_crypto_key_iam_binding.disk_crypto_key.crypto_key_id}"
     },
   ]
+  node_pools_labels = {
+    all = {}
+
+    default-node-pool = {
+      default-node-pool = true
+    }
+  }
+  node_pools_tags = {
+    all = []
+
+    default-node-pool = [
+      "default-node-pool",
+    ]
+  }
+database_encryption = [
+  {
+    state="ENCRYPTED"
+    key_name="${google_kms_crypto_key_iam_binding.gke_crypto_key.crypto_key_id}"
+  }
+]
 
   master_authorized_networks = [
     {

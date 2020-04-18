@@ -18,6 +18,9 @@
 variable "project_id" {
   description = "The project ID to host the cluster in"
 }
+variable "project_number" {
+  description = "The project number to host the cluster in"
+}
 
 variable "gke_cluster_name" {
   description = "GKE cluster name"
@@ -47,3 +50,12 @@ variable "compute_engine_service_account" {
   description = "Service account to associate to the nodes in the cluster"
 }
 
+variable "key_ring_name" {
+  description = "key ring name"
+}
+variable "key_name_gke" {
+  description = "key gke name"
+}
+variable "key_name_disk" {
+  description = "key disk name"
+}
