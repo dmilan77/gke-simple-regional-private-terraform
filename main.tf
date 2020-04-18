@@ -73,11 +73,39 @@ resource "google_kms_crypto_key_iam_binding" "disk_crypto_key" {
   ]
 }
 
+// Create a network for GKE
+resource "google_compute_network" "network" {
+  name                    = var.network
+  project                 = var.project_id
+  auto_create_subnetworks = false
+}
+
+// Create subnets
+resource "google_compute_subnetwork" "subnetwork" {
+  name          = var.subnetwork
+  project       = var.project_id
+  network       = google_compute_network.network.self_link
+  region        = var.region
+  ip_cidr_range = "192.168.0.0/24"
+
+  private_ip_google_access = true
+
+  secondary_ip_range {
+    range_name    = var.ip_range_pods
+    ip_cidr_range = "10.1.0.0/16"
+  }
+
+  secondary_ip_range {
+    range_name    = var.ip_range_services
+    ip_cidr_range = "10.2.0.0/20"
+  }
+}
 
 data "google_compute_subnetwork" "subnetwork" {
   name    = var.subnetwork
   project = var.project_id
   region  = var.region
+  # ip_cidr_range="192.168.0.0/24"
 }
 
 module "gke" {
@@ -146,7 +174,7 @@ database_encryption = [
 
   master_authorized_networks = [
     {
-      cidr_block   = data.google_compute_subnetwork.subnetwork.ip_cidr_range
+      cidr_block   = google_compute_subnetwork.subnetwork.ip_cidr_range
       display_name = "VPC"
     },
   ]
@@ -158,6 +186,42 @@ module "workload_identity" {
   namespace           = "default"
   use_existing_k8s_sa = false
 }
+resource "google_compute_instance" "k8bastion" {
+  name         = "k8bastion"
+  project         = var.project_id
+  machine_type = "n1-standard-1"
+  zone         = "us-east1-b"
 
+  tags = ["foo", "bar"]
+
+  boot_disk {
+    initialize_params {
+      image = "debian-cloud/debian-9"
+    }
+  }
+
+  // Local SSD disk
+  scratch_disk {
+    interface = "SCSI"
+  }
+
+  network_interface {
+    subnetwork = google_compute_subnetwork.subnetwork.self_link
+
+    access_config {
+      // Ephemeral IP
+    }
+  }
+
+  metadata = {
+    foo = "bar"
+  }
+
+  metadata_startup_script = file("startup.sh")
+
+  service_account {
+    scopes = ["userinfo-email", "compute-ro", "storage-ro"]
+  }
+}
 data "google_client_config" "default" {
 }
