@@ -29,6 +29,14 @@ variable "gke_cluster_name" {
 variable "region" {
   description = "The region to host the cluster in"
 }
+variable "regional" {
+  description = "The region to host the cluster in"
+}
+
+variable "zones" {
+  type        = list(string)
+  description = "The zone to host the cluster in (required if is a zonal cluster)"
+}
 
 variable "network" {
   description = "The VPC network to host the cluster in"

@@ -86,8 +86,9 @@ module "gke" {
   source                    = "git::https://github.com/terraform-google-modules/terraform-google-kubernetes-engine.git//modules/beta-private-cluster?ref=release-v8.2.0"
   project_id                = var.project_id
   name                      = "${var.gke_cluster_name}"
-  regional                  = true
+  regional                  = false
   region                    = var.region
+  zones                     = var.zones
   network                   = var.network
   subnetwork                = var.subnetwork
   ip_range_pods             = var.ip_range_pods
