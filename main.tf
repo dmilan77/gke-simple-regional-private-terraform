@@ -96,6 +96,7 @@ module "gke" {
   service_account           = "${google_service_account.compute_engine_service_account.email}"
   enable_private_endpoint   = true
   enable_private_nodes      = true
+  istio                                    = true
   master_ipv4_cidr_block    = "172.16.0.0/28"
   default_max_pods_per_node = 20
   remove_default_node_pool  = true
@@ -145,6 +146,13 @@ database_encryption = [
       display_name = "VPC"
     },
   ]
+}
+module "workload_identity" {
+  source                    = "git::https://github.com/terraform-google-modules/terraform-google-kubernetes-engine.git//modules/workload-identity?ref=release-v8.2.0"
+  project_id          = var.project_id
+  name                = "iden-${module.gke.name}"
+  namespace           = "default"
+  use_existing_k8s_sa = false
 }
 
 data "google_client_config" "default" {
