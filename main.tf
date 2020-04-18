@@ -61,8 +61,8 @@ resource "google_kms_crypto_key_iam_binding" "gke_crypto_key" {
 
   ]
 }
-resource "google_kms_crypto_key_iam_binding" "disk_crypto_key" {
-  crypto_key_id = "projects/${var.project_id}/locations/${var.region}/keyRings/${var.key_ring_name}/cryptoKeys/${var.key_name_disk}"
+resource "google_kms_crypto_key_iam_binding" "boot_disk_kms_key" {
+  crypto_key_id = "projects/${var.project_id}/locations/${var.region}/keyRings/${var.key_ring_name}/cryptoKeys/${var.boot_disk_kms_key}"
   role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
 
   members = [
@@ -166,7 +166,7 @@ module "gke" {
       service_account   = "${google_service_account.compute_engine_service_account.email}"
       preemptible       = false
       max_pods_per_node = 12
-      boot-disk-kms-key = "${google_kms_crypto_key_iam_binding.disk_crypto_key.crypto_key_id}"
+      boot-disk-kms-key = "${google_kms_crypto_key_iam_binding.boot_disk_kms_key.crypto_key_id}"
     },
   ]
   node_pools_labels = {
@@ -198,7 +198,8 @@ database_encryption = [
   ]
 }
 module "workload_identity" {
-  source                    = "git::https://github.com/terraform-google-modules/terraform-google-kubernetes-engine.git//modules/workload-identity?ref=release-v8.2.0"
+  # source                    = "git::https://github.com/terraform-google-modules/terraform-google-kubernetes-engine.git//modules/workload-identity?ref=release-v8.2.0"
+  source                    = "git::https://github.com/dmilan77/terraform-google-kubernetes-engine.git//modules/workload-identity"
   project_id          = var.project_id
   name                = "iden-${module.gke.name}"
   namespace           = "default"

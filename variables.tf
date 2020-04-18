@@ -64,8 +64,8 @@ variable "key_ring_name" {
 variable "key_name_gke" {
   description = "key gke name"
 }
-variable "key_name_disk" {
-  description = "key disk name"
+variable "boot_disk_kms_key" {
+  description = "boot disk key name"
 }
 variable "bastion_host_name" {
   description = "bastion host name for accessing K8s"
