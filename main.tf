@@ -100,6 +100,8 @@ module "gke" {
   master_ipv4_cidr_block    = "172.16.0.0/28"
   default_max_pods_per_node = 20
   remove_default_node_pool  = true
+  network_policy                     = true
+  network_policy_provider       = "CALICO"
 
   node_pools = [
     {
@@ -113,6 +115,7 @@ module "gke" {
       image_type        = "COS"
       auto_repair       = true
       auto_upgrade      = true
+      preemptible       = false
       service_account   = "${google_service_account.compute_engine_service_account.email}"
       preemptible       = false
       max_pods_per_node = 12
