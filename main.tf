@@ -108,8 +108,8 @@ data "google_compute_subnetwork" "subnetwork" {
   # ip_cidr_range="192.168.0.0/24"
 }
 
-resource "google_compute_firewall" "port-22-80-8080" {
-  name    = "${var.network}-port-22-80-8080"
+resource "google_compute_firewall" "port-22-443-80-8080-8443" {
+  name    = "${var.network}-port-22-443-80-8080-8443"
   project= var.project_id
   network = google_compute_network.network.self_link
 
@@ -119,7 +119,7 @@ resource "google_compute_firewall" "port-22-80-8080" {
 
   allow {
     protocol = "tcp"
-    ports    = ["22", "80", "8080"]
+    ports    = ["22", "80", "8080", "443", "8443"]
   }
   source_ranges =["0.0.0.0/0"]
 }
@@ -129,7 +129,8 @@ resource "google_compute_firewall" "port-22-80-8080" {
 module "gke" {
   # https://github.com/terraform-google-modules/terraform-google-kubernetes-engine.git
   # source                    = "../terraform-google-kubernetes-engine/modules/private-cluster/"
-  source                    = "git::https://github.com/terraform-google-modules/terraform-google-kubernetes-engine.git//modules/beta-private-cluster?ref=release-v8.2.0"
+  # source                    = "git::https://github.com/terraform-google-modules/terraform-google-kubernetes-engine.git//modules/beta-private-cluster?ref=release-v8.2.0"
+  source                    = "git::https://github.com/dmilan77/terraform-google-kubernetes-engine.git//modules/beta-private-cluster"
   project_id                = var.project_id
   name                      = "${var.gke_cluster_name}"
   regional                  = false
@@ -143,21 +144,23 @@ module "gke" {
   service_account           = "${google_service_account.compute_engine_service_account.email}"
   enable_private_endpoint   = true
   enable_private_nodes      = true
-  istio                                    = true
+  istio                                    = false
   master_ipv4_cidr_block    = "172.16.0.0/28"
   default_max_pods_per_node = 20
   remove_default_node_pool  = true
   network_policy                     = true
   network_policy_provider       = "CALICO"
+  node_metadata                      = "GKE_METADATA_SERVER"
+  identity_namespace              = "${var.project_id}.svc.id.goog"
 
   node_pools = [
     {
       name              = "pool-01"
       machine_type      = "n1-standard-2"
       min_count         = 1
-      max_count         = 100
+      max_count         = 3
       local_ssd_count   = 0
-      disk_size_gb      = 100
+      disk_size_gb      = 30
       disk_type         = "pd-standard"
       image_type        = "COS"
       auto_repair       = true
@@ -196,15 +199,16 @@ database_encryption = [
       display_name = "VPC"
     },
   ]
+
 }
-module "workload_identity" {
-  # source                    = "git::https://github.com/terraform-google-modules/terraform-google-kubernetes-engine.git//modules/workload-identity?ref=release-v8.2.0"
-  source                    = "git::https://github.com/dmilan77/terraform-google-kubernetes-engine.git//modules/workload-identity"
-  project_id          = var.project_id
-  name                = "iden-${module.gke.name}"
-  namespace           = "default"
-  use_existing_k8s_sa = false
-}
+# module "workload_identity" {
+#   # source                    = "git::https://github.com/terraform-google-modules/terraform-google-kubernetes-engine.git//modules/workload-identity?ref=release-v8.2.0"
+#   source                    = "git::https://github.com/dmilan77/terraform-google-kubernetes-engine.git//modules/workload-identity"
+#   project_id          = var.project_id
+#   name                = "iden-${module.gke.name}"
+#   namespace           = "default"
+#   use_existing_k8s_sa = false
+# }
 resource "google_compute_instance" "k8bastion" {
   name         = var.bastion_host_name
   project         = var.project_id
